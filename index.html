@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeFlow Studio</title>
+
+  <!-- CSS Links -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/material.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Simple flexbox for layout */
+    .container {
+      display: flex;
+      height: 100vh;
+      flex-direction: row;
+    }
+    .editor-container, .iframe-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .editor-header, .iframe-header {
+      background-color: #333;
+      color: white;
+      padding: 10px;
+    }
+    .editor-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-editor {
+      width: 100%;
+      height: 100%;
+      font-size: 16px;
+    }
+    #output {
+      width: 100%;
+      height: 100%;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body onresize="windowSize()">
+  <div class="container" id="container">
+    <div class="editor-container">
+      <div class="editor-header">
+        <button id="toggle-editor">Toggle Editor</button>
+        <div id="editor-tabs">
+          <button data-editor="html">HTML</button>
+          <button data-editor="css">CSS</button>
+          <button data-editor="js">JavaScript</button>
+        </div>
+        <select id="theme-selector">
+          <option value="material">Material</option>
+          <option value="dracula">Dracula</option>
+        </select>
+      </div>
+      <div class="editor-content">
+        <textarea id="html-editor" class="code-editor"></textarea>
+        <textarea id="css-editor" class="code-editor hidden"></textarea>
+        <textarea id="js-editor" class="code-editor hidden"></textarea>
+      </div>
+    </div>
+    <div class="divider" id="divider"></div>
+    <div class="iframe-container" id="iframe-container">
+      <div class="iframe-header">
+        <button id="toggle-preview">Toggle Preview</button>
+        <button id="share-site">Share This Site</button>
+        <button id="embed-editor">Embed Editor</button>
+      </div>
+      <iframe id="output" sandbox="allow-scripts" frameborder="0"></iframe>
+    </div>
+  </div>
+
+  <!-- CodeMirror Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closetag.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/html-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/css-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/javascript-hint.min.js"></script>
+  
+  <script>
+    let editors = {
+      html: CodeMirror.fromTextArea(document.getElementById('html-editor'), {
+        mode: 'xml',
+        theme: 'material',
+        lineNumbers: true,
+        autoCloseTags: true
+      }),
+      css: CodeMirror.fromTextArea(document.getElementById('css-editor'), {
+        mode: 'css',
+        theme: 'material',
+        lineNumbers: true,
+        autoCloseBrackets: true
+      }),
+      js: CodeMirror.fromTextArea(document.getElementById('js-editor'), {
+        mode: 'javascript',
+        theme: 'material',
+        lineNumbers: true,
+        autoCloseBrackets: true
+      })
+    };
+
+    // Tab switching
+    document.querySelectorAll('[data-editor]').forEach(tab => {
+      tab.addEventListener('click', function() {
+        let editorType = this.getAttribute('data-editor');
+        Object.keys(editors).forEach(type => {
+          editors[type].getWrapperElement().parentNode.classList.add('hidden');
+        });
+        editors[editorType].getWrapperElement().parentNode.classList.remove('hidden');
+      });
+    });
+
+    // Update iframe in real-time
+    function updateIframe() {
+      let html = editors.html.getValue();
+      let css = `<style>${editors.css.getValue()}</style>`;
+      let js = `<script>${editors.js.getValue()}<\/script>`;
+      let iframe = document.getElementById('output').contentWindow.document;
+      iframe.open();
+      iframe.write(html + css + js);
+      iframe.close();
+    }
+
+    Object.keys(editors).forEach(editor => {
+      editors[editor].on('change', updateIframe);
+    });
+
+    // Theme switcher
+    document.getElementById('theme-selector').addEventListener('change', function() {
+      let theme = this.value;
+      Object.keys(editors).forEach(editor => {
+        editors[editor].setOption('theme', theme);
+      });
+    });
+    
+    // Initial run to load content in iframe
+    updateIframe();
+  </script>
+</body>
+</html>
